@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIFAR-10 CNN Model Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            background: #f8fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .status-healthy {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .status-loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e1;
+            border-radius: 15px;
+            padding: 60px 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8fafc;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f0f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #4f46e5;
+            background: #eff6ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: #475569;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        .upload-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 40px;
+        }
+
+        .preview-container {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .result-card h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .prediction-result {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .predicted-class {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 10px;
+            text-transform: capitalize;
+        }
+
+        .confidence-score {
+            font-size: 1.2rem;
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .probabilities-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .probability-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .probability-item:last-child {
+            border-bottom: none;
+        }
+
+        .class-name {
+            font-weight: 500;
+            color: #374151;
+            text-transform: capitalize;
+        }
+
+        .probability-bar {
+            flex: 1;
+            margin: 0 15px;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .probability-value {
+            font-weight: 600;
+            color: #4f46e5;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid #fecaca;
+        }
+
+        .classes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .class-chip {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 8px 12px;
+            border-radius: 20px;
+            text-align: center;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-transform: capitalize;
+        }
+
+        .reset-btn {
+            background: #6b7280;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: #4b5563;
+            transform: translateY(-1px);
+        }
+
+        .connection-info {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #fbbf24;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .upload-area {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 CIFAR-10 CNN Model Tester</h1>
+            <p>Upload an image to test your trained CNN model</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item status-loading" id="statusIndicator">
+                <span>🔄</span>
+                <span>Checking API Status...</span>
+            </div>
+            <div class="status-item" id="deviceInfo" style="background: #e0e7ff; color: #3730a3;">
+                <span>🖥️</span>
+                <span>Device: Loading...</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="connection-info" id="connectionInfo">
+                <strong>🔧 Setup Instructions:</strong><br>
+                1. Make sure your Flask backend is running on <code>http://localhost:5001</code><br>
+                2. Install flask-cors: <code>pip install flask-cors</code><br>
+                3. Place your model file in the same directory as backend.py
+            </div>
+
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Drop your image here or click to browse</div>
+                    <div class="upload-subtext">Supports JPG, PNG, GIF • Max 10MB</div>
+                </div>
+                <input type="file" class="file-input" id="fileInput" accept="image/*">
+                <button class="upload-btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">
+                    Choose Image
+                </button>
+            </div>
+
+            <div class="preview-section" id="previewSection">
+                <div class="preview-container">
+                    <img class="preview-image" id="previewImage" alt="Preview">
+                    <div>
+                        <button class="upload-btn" id="predictBtn">🔮 Predict Image</button>
+                        <button class="reset-btn" id="resetBtn">🔄 Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loadingSection">
+                <div class="spinner"></div>
+                <p>Analyzing your image...</p>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <div class="results-grid">
+                    <div class="result-card">
+                        <h3>🎯 Prediction Result</h3>
+                        <div class="prediction-result">
+                            <div class="predicted-class" id="predictedClass">-</div>
+                            <div class="confidence-score" id="confidenceScore">-</div>
+                        </div>
+                    </div>
+                    <div class="result-card">
+                        <h3>📊 Class Probabilities</h3>
+                        <div class="probabilities-list" id="probabilitiesList">
+                            <!-- Probabilities will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-card" style="margin-top: 30px;">
+                <h3>🏷️ CIFAR-10 Classes</h3>
+                <div class="classes-grid" id="classesGrid">
+                    <!-- Classes will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:5001';
+        
+        // DOM Elements
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const previewSection = document.getElementById('previewSection');
+        const previewImage = document.getElementById('previewImage');
+        const predictBtn = document.getElementById('predictBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const predictedClass = document.getElementById('predictedClass');
+        const confidenceScore = document.getElementById('confidenceScore');
+        const probabilitiesList = document.getElementById('probabilitiesList');
+        const classesGrid = document.getElementById('classesGrid');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const deviceInfo = document.getElementById('deviceInfo');
+        const connectionInfo = document.getElementById('connectionInfo');
+
+        let selectedFile = null;
+        let apiHealthy = false;
+
+        // Initialize the application
+        async function init() {
+            await checkAPIHealth();
+            await loadClasses();
+            setupEventListeners();
+        }
+
+        // Check API health status
+        async function checkAPIHealth() {
+            try {
+                console.log('Checking API health...');
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API health response:', data);
+                
+                apiHealthy = data.status === 'healthy';
+                
+                if (apiHealthy) {
+                    statusIndicator.className = 'status-item status-healthy';
+                    statusIndicator.innerHTML = '<span>✅</span><span>API Connected</span>';
+                    deviceInfo.innerHTML = `<span>🖥️</span><span>Device: ${data.device}</span>`;
+                    
+                    if (data.model_loaded) {
+                        connectionInfo.style.display = 'none';
+                    } else {
+                        connectionInfo.innerHTML = '<strong>⚠️ Warning:</strong> Model not loaded. Please check the model file path in backend.py';
+                        connectionInfo.style.background = '#fef2f2';
+                        connectionInfo.style.color = '#dc2626';
+                        connectionInfo.style.borderColor = '#fecaca';
+                    }
+                } else {
+                    throw new Error('API not healthy');
+                }
+            } catch (error) {
+                console.error('API health check failed:', error);
+                apiHealthy = false;
+                statusIndicator.className = 'status-item status-error';
+                statusIndicator.innerHTML = '<span>❌</span><span>API Disconnected</span>';
+                deviceInfo.innerHTML = '<span>🖥️</span><span>Device: Unknown</span>';
+                connectionInfo.innerHTML = '<strong>❌ Connection Error:</strong> Cannot connect to backend. Please make sure Flask server is running on port 5001.';
+                connectionInfo.style.background = '#fef2f2';
+                connectionInfo.style.color = '#dc2626';
+                connectionInfo.style.borderColor = '#fecaca';
+            }
+        }
+
+        // Load CIFAR-10 classes
+        async function loadClasses() {
+            try {
+                if (!apiHealthy) return;
+                
+                const response = await fetch(`${API_BASE_URL}/classes`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Classes loaded:', data);
+                
+                // Populate classes grid
+                classesGrid.innerHTML = '';
+                data.classes.forEach(className => {
+                    const chip = document.createElement('div');
+                    chip.className = 'class-chip';
+                    chip.textContent = className;
+                    classesGrid.appendChild(chip);
+                });
+            } catch (error) {
+                console.error('Failed to load classes:', error);
+                classesGrid.innerHTML = '<div style="color: #dc2626; text-align: center;">Failed to load classes</div>';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // File input change
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            // Drag and drop
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleFileDrop);
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            // Predict button
+            predictBtn.addEventListener('click', predictImage);
+            
+            // Reset button
+            resetBtn.addEventListener('click', resetApp);
+        }
+
+        // Handle file selection
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        // Handle drag over
+        function handleDragOver(event) {
+            event.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        // Handle drag leave
+        function handleDragLeave(event) {
+            event.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        // Handle file drop
+        function handleFileDrop(event) {
+            event.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+
+        // Process selected file
+        function processFile(file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select a valid image file.');
+                return;
+            }
+            
+            // Validate file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size too large. Please select an image under 10MB.');
+                return;
+            }
+            
+            selectedFile = file;
+            
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewSection.style.display = 'block';
+                resultsSection.style.display = 'none';
+                
+                // Enable predict button if API is healthy
+                predictBtn.disabled = !apiHealthy;
+                if (!apiHealthy) {
+                    predictBtn.innerHTML = '❌ API Disconnected';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Predict image
+        async function predictImage() {
+            if (!selectedFile || !apiHealthy) {
+                showError('Please select an image and ensure API is connected.');
+                return;
+            }
+            
+            // Show loading
+            loadingSection.style.display = 'block';
+            resultsSection.style.display = 'none';
+            predictBtn.disabled = true;
+            
+            try {
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                // Make prediction request
+                const response = await fetch(`${API_BASE_URL}/predict`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Prediction result:', result);
+                
+                if (result.success) {
+                    displayResults(result);
+                } else {
+                    throw new Error(result.error || 'Prediction failed');
+                }
+            } catch (error) {
+                console.error('Prediction error:', error);
+                showError(`Prediction failed: ${error.message}`);
+            } finally {
+                loadingSection.style.display = 'none';
+                predictBtn.disabled = false;
+            }
+        }
+
+        // Display prediction results
+        function displayResults(result) {
+            // Update prediction result
+            predictedClass.textContent = result.predicted_class;
+            confidenceScore.textContent = `${(result.confidence * 100).toFixed(1)}% confidence`;
+            
+            // Update probabilities list
+            probabilitiesList.innerHTML = '';
+            
+            // Sort probabilities by value (descending)
+            const sortedProbs = Object.entries(result.class_probabilities)
+                .sort(([,a], [,b]) => b - a);
+            
+            sortedProbs.forEach(([className, probability]) => {
+                const item = document.createElement('div');
+                item.className = 'probability-item';
+                
+                const percentage = (probability * 100).toFixed(1);
+                
+                item.innerHTML = `
+                    <span class="class-name">${className}</span>
+                    <div class="probability-bar">
+                        <div class="probability-fill" style="width: ${percentage}%"></div>
+                    </div>
+                    <span class="probability-value">${percentage}%</span>
+                `;
+                
+                probabilitiesList.appendChild(item);
+            });
+            
+            // Show results
+            resultsSection.style.display = 'block';
+        }
+
+        // Show error message
+        function showError(message) {
+            // Remove existing error messages
+            const existingError = document.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // Create new error message
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            
+            // Insert after connection info
+            connectionInfo.parentNode.insertBefore(errorDiv, connectionInfo.nextSibling);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        // Reset application
+        function resetApp() {
+            selectedFile = null;
+            fileInput.value = '';
+            previewSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            loadingSection.style.display = 'none';
+            predictBtn.disabled = false;
+            predictBtn.innerHTML = '🔮 Predict Image';
+            
+            // Remove error messages
+            const errorMessages = document.querySelectorAll('.error-message');
+            errorMessages.forEach(msg => msg.remove());
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
